@@ -19,53 +19,56 @@
 #define I2C_ADDR_CODEC 0x18
 #define I2C_ADDR_EEPROM 0x54
 
-enum class ControlType
+namespace Polygons
 {
-    Digital,
-    Encoder,
-    Analog,
-    AnalogFast
-};
+    enum class ControlType
+    {
+        Digital,
+        Encoder,
+        Analog,
+        AnalogFast
+    };
 
-const int CONTROL_COUNT = 64;
+    const int CONTROL_COUNT = 64;
 
-struct ControlMatrix
-{
-    bool Digital[CONTROL_COUNT]; // $DI
-    int32_t Encoder[CONTROL_COUNT]; // $EN
-    int8_t EncoderDelta[CONTROL_COUNT]; // $EN
-    uint16_t Analog[CONTROL_COUNT]; // $AN
-    uint16_t AnalogFast[CONTROL_COUNT]; // $AF
+    struct ControlMatrix
+    {
+        bool Digital[CONTROL_COUNT]; // $DI
+        int32_t Encoder[CONTROL_COUNT]; // $EN
+        int8_t EncoderDelta[CONTROL_COUNT]; // $EN
+        uint16_t Analog[CONTROL_COUNT]; // $AN
+        uint16_t AnalogFast[CONTROL_COUNT]; // $AF
 
-    bool DigitalOut[CONTROL_COUNT]; // $DO
-    uint16_t AnalogOut[CONTROL_COUNT]; // $AO
+        bool DigitalOut[CONTROL_COUNT]; // $DO
+        uint16_t AnalogOut[CONTROL_COUNT]; // $AO
 
-    static void (*onUpdate)(ControlType type, int index);
+        static void (*onUpdate)(ControlType type, int index);
 
-    //  call these in the background loop
-    static void pushDigital(uint8_t index, bool value); // $DO
-    static void pushAnalog(uint8_t index, uint16_t value); // $AO
+        //  call these in the background loop
+        static void pushDigital(uint8_t index, bool value); // $DO
+        static void pushAnalog(uint8_t index, uint16_t value); // $AO
 
-    // Processes data from the UART buffer and updates the control matrix with new values
-    // call from audio processing loop
-    static void readUpdates();
+        // Processes data from the UART buffer and updates the control matrix with new values
+        // call from audio processing loop
+        static void readUpdates();
 
-    ControlMatrix();
-};
+        ControlMatrix();
+    };
 
-extern AudioControlTLV320AIC3204 cctrl;
-extern SRAMsimple sram;
-extern ControlMatrix controls;
+    extern AudioControlTLV320AIC3204 cctrl;
+    extern SRAMsimple sram;
+    extern ControlMatrix controls;
 
-// turns the RESET pin of the codec high
-void enableCodec();
+    // turns the RESET pin of the codec high
+    void enableCodec();
 
-// Configures the INPUT/OUTPUT modes of pins
-void setPinModes();
+    // Configures the INPUT/OUTPUT modes of pins
+    void setPinModes();
 
-// Initialises the I2S bus, clock signals, and the codec
-void tritiumInit();
+    // Initialises the I2S bus, clock signals, and the codec
+    void init();
 
-GFXcanvas1* getCanvas();
+    GFXcanvas1* getCanvas();
 
-void pushDisplay(); // $SC
+    void pushDisplay(); // $SC
+}

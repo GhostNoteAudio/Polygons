@@ -1,5 +1,5 @@
 #pragma once
-#include "../Tritium.h"
+#include "../Polygons.h"
 
 template<uint S> // S must be power of 2!!
 class DelayBlock
