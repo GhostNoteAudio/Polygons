@@ -4,13 +4,13 @@
 
 namespace Polygons
 {
-    AudioControlTLV320AIC3204 cctrl;
+    AudioControlTLV320AIC3204 codec;
     SRAMsimple sram;
     ControlMatrix controls;
 
     void (*ControlMatrix::onUpdate)(ControlType type, int index);
-    GFXcanvas1 canvas(128, 64);
-    char encodedString[1400];
+    GFXcanvas1 canvas(256, 64);
+    char encodedString[2750];
 
     char ser_buffer[128];
     int ser_bufferIndex;
@@ -83,12 +83,12 @@ namespace Polygons
         InitI2s();
 
         Serial.println("starting codec stuff...");
-        cctrl.init();
+        codec.init();
 
         Serial.println("Setting initial gain...");
-        cctrl.analogInGain(0, 0);
-        cctrl.headphoneGain(0, 0, false);
-        cctrl.lineOutGain(0, 0, false);
+        codec.analogInGain(0, 0);
+        codec.headphoneGain(0, 0, false);
+        codec.lineOutGain(0, 0, false);
         Serial.println("Codec ready.");
     }
 
@@ -168,7 +168,7 @@ namespace Polygons
     void pushDisplay()
     {
         auto buf = canvas.getBuffer();
-        Base64.encode(encodedString, (char*)buf, 1024);
+        Base64.encode(encodedString, (char*)buf, 2048);
         Serial.print("$SC,");
         Serial.println(encodedString);
     }

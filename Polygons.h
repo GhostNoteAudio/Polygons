@@ -55,7 +55,7 @@ namespace Polygons
         ControlMatrix();
     };
 
-    extern AudioControlTLV320AIC3204 cctrl;
+    extern AudioControlTLV320AIC3204 codec;
     extern SRAMsimple sram;
     extern ControlMatrix controls;
 

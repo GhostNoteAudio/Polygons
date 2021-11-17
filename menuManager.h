@@ -1,9 +1,9 @@
 #pragma once
 
 #include "Polygons.h"
-#include "font.h"
-#include "font2.h"
-#include "font3.h"
+#include "fonts/font.h"
+#include "fonts/font2.h"
+#include "fonts/font3.h"
 
 namespace Polygons
 {
@@ -16,8 +16,7 @@ namespace Polygons
         uint8_t pageCount;
         int SelectedPage;
         void (*getPageName)(int page, char* dest);
-        void (*getParameterShortName)(int page, int index, char* dest);
-        void (*getParameterLongName)(int page, int index, char* dest);
+        void (*getParameterName)(int page, int index, char* dest);
         void (*getParameterDisplay)(int page, int index, char* dest);
         
         // for displaying custom messages
@@ -40,12 +39,10 @@ namespace Polygons
                 sprintf(dest, "PAGE%d", page);
             };
 
-            getParameterShortName = [](int page, int index, char* dest) 
+            getParameterName = [](int page, int index, char* dest) 
             {
                 sprintf(dest, "PAR%d", (page * 8 + index));
             };
-
-            getParameterLongName = getParameterShortName;
 
             getParameterDisplay = [](int page, int index, char* dest)
             {
@@ -92,7 +89,7 @@ namespace Polygons
         {
             char buffer[32];
             auto canvas = getCanvas();
-            canvas->fillRect(0, 0, 128, 64, 0);
+            canvas->fillRect(0, 0, 256, 64, 0);
             canvas->setTextWrap(false);
             canvas->setTextSize(1);
             canvas->setFont(&AtlantisInternational_jen08pt7b);
@@ -102,11 +99,11 @@ namespace Polygons
             {
                 int y = i < 4 ? 7 : 61;
                 int ySel = i < 4 ? 0 : 54;
-                int x = (i % 4) * 32;
+                int x = (i % 4) * 64;
                 if (i == SelectedPage)
                 {
                     canvas->setTextColor(0);
-                    canvas->fillRect(x, ySel, 32, 10, 1);
+                    canvas->fillRect(x, ySel, 64, 10, 1);
                 }
                 else
                 {
@@ -120,17 +117,17 @@ namespace Polygons
 
             // Draw lines
             canvas->setTextColor(1);
-            canvas->fillRect(0, 10, 128, 1, 1);
-            canvas->fillRect(0, 53, 128, 1, 1);
+            canvas->fillRect(0, 10, 256, 1, 1);
+            canvas->fillRect(0, 53, 256, 1, 1);
                     
             // Draw parameter names
             for (size_t i = 0; i < 8; i++)
             {
                 int y = i < 4 ? 19 : 40;
-                int x = (i % 4) * 32;
+                int x = (i % 4) * 64;
 
                 canvas->setCursor(x+1,y);
-                getParameterShortName(SelectedPage, i, buffer);
+                getParameterName(SelectedPage, i, buffer);
                 canvas->println(buffer);
             }
 
@@ -138,7 +135,7 @@ namespace Polygons
             for (size_t i = 0; i < 8; i++)
             {
                 int y = i < 4 ? 28 : 50;
-                int x = (i % 4) * 32;
+                int x = (i % 4) * 64;
 
                 canvas->setCursor(x+1,y);
                 getParameterDisplay(SelectedPage, i, buffer);
@@ -148,8 +145,8 @@ namespace Polygons
             // show overlay window
             if (ShouldShowMessage())
             {
-                canvas->fillRect(10, 10, 128-20, 64-20, 0);
-                canvas->drawRect(10, 10, 128-20, 64-20, 1);
+                canvas->fillRect(10, 10, 256-20, 64-20, 0);
+                canvas->drawRect(10, 10, 256-20, 64-20, 1);
                 canvas->setFont(NULL);
                 canvas->cp437(true);
                 int16_t  x1, y1;
@@ -161,23 +158,23 @@ namespace Polygons
             }
             else if (millis() - lastUpdateTime < 1000)
             {
-                getParameterLongName(SelectedPage, lastUpdatedParam, buffer);
+                getParameterName(SelectedPage, lastUpdatedParam, buffer);
                 if (strlen(buffer) > 0)
                 {
-                    canvas->fillRect(10, 10, 128-20, 64-20, 0);
-                    canvas->drawRect(10, 10, 128-20, 64-20, 1);
+                    canvas->fillRect(10, 10, 256-20, 64-20, 0);
+                    canvas->drawRect(10, 10, 256-20, 64-20, 1);
                     canvas->setFont(NULL);
                     canvas->cp437(true);
                     int16_t  x1, y1;
                     uint16_t w, h;      
                     
                     canvas->getTextBounds(buffer, 0, 0, &x1, &y1, &w, &h);
-                    canvas->setCursor(64 - w/2, 19);
+                    canvas->setCursor(128 - w/2, 19);
                     canvas->println(buffer);
 
                     getParameterDisplay(SelectedPage, lastUpdatedParam, buffer);
                     canvas->getTextBounds(buffer, 0, 0, &x1, &y1, &w, &h);
-                    canvas->setCursor(64 - w/2, 34);
+                    canvas->setCursor(128 - w/2, 34);
                     canvas->println(buffer);
                 }
             }
