@@ -18,12 +18,12 @@ namespace Polygons
     ControlMatrix::ControlMatrix()
     {
         this->onUpdate = 0;
+        this->Expression = 0;
         for (size_t i = 0; i < CONTROL_COUNT; i++)
         {
             this->Digital[i] = 0;
             this->Encoder[i] = 0;
             this->Analog[i] = 0;
-            this->AnalogFast[i] = 0;
             this->EncoderDelta[i] = 0;
             this->DigitalOut[i] = 0;
             this->AnalogOut[i] = 0;
@@ -32,45 +32,38 @@ namespace Polygons
 
     void enableCodec()
     { 
-        digitalWrite(P_SPI_DOUT, HIGH);
-        digitalWrite(P_SPI_CLK, LOW);
-        digitalWrite(P_LATCH_ANALOG, LOW);
+        digitalWrite(P_DAC_RESET, HIGH);
         delay(1);
-        for(int i=0; i<8; i++)
-        {
-            digitalWrite(P_SPI_CLK, HIGH);
-            delay(1);
-            digitalWrite(P_SPI_CLK, LOW);
-            delay(1);
-        }
-
-        digitalWrite(P_LATCH_ANALOG, HIGH);
-        delay(1);
-        digitalWrite(P_LATCH_ANALOG, LOW);
-        delay(1);  
     }
 
     // Sets all the necessary input and output pin modes
     void setPinModes()
     {
-        pinMode(P_SPI_CS, OUTPUT);
+        pinMode(P_SPI_SD_CS, OUTPUT);
+        pinMode(P_SPI_SRAM_CS, OUTPUT);
         pinMode(P_SPI_DOUT, OUTPUT);
         pinMode(P_SPI_DIN, INPUT);
         pinMode(P_SPI_CLK, OUTPUT);
 
-        //pinMode(P_MIDI_RX, INPUT);
-        //pinMode(P_MIDI_TX, OUTPUT);
+        // Serial.begin takes care of these
+        // pinMode(P_UART_RX, INPUT);
+        // pinMode(P_UART_TX, OUTPUT);
+        // pinMode(P_MIDI_RX, INPUT);
+        // pinMode(P_MIDI_TX, OUTPUT);
         
-        pinMode(P_LATCH_ANALOG, OUTPUT);
-        pinMode(P_LATCH_DIGITAL, OUTPUT);
+        pinMode(P_EXP_IN, INPUT);
+        pinMode(P_DAC_RESET, OUTPUT);
         
-        //pinMode(P_SCL, OUTPUT); // don't set SCL low, it fucks with the protocol
+        // don't set SCL low, it screws with the I2C protocol
+        // pinMode(P_SCL, OUTPUT);
     }
 
     void init()
     {
         Serial.begin(115200);
-        Serial1.begin(31250);
+        Serial1.begin(115200);
+        Serial3.begin(31250);
+
         controls.onUpdate = 0;
 
         Serial.println("Setting pin modes...");
@@ -83,12 +76,18 @@ namespace Polygons
         InitI2s();
 
         Serial.println("starting codec stuff...");
+        if (codec.testConnection())
+            Serial.println("Codec is active");
+        else
+            Serial.println("Codec is unresponsive!");
+
         codec.init();
 
         Serial.println("Setting initial gain...");
         codec.analogInGain(0, 0);
         codec.headphoneGain(0, 0, false);
         codec.lineOutGain(0, 0, false);
+        codec.enableLoopbackAdc();
         Serial.println("Codec ready.");
     }
 
@@ -152,11 +151,6 @@ namespace Polygons
                 {
                     controls.Analog[id] = value;
                     type = ControlType::Analog;
-                }
-                else if (strcmp(key, "$AF") == 0)
-                {
-                    controls.AnalogFast[id] = value;
-                    type = ControlType::AnalogFast;
                 }
 
                 if (controls.onUpdate)

@@ -1,5 +1,5 @@
 #pragma once
-#include "../Polygons.h"
+#include "Polygons.h"
 
 template<uint S, uint B> // S must be power of 2, S must be multiple of B
 class DelayBlockExternal
@@ -23,7 +23,7 @@ public:
 
     inline void init()
     {
-        CS = P_SPI_CS;
+        CS = P_SPI_SRAM_CS;
         SPI.begin();
         int32_t zeros[64] = { 0 };
         for (size_t i = 0; i < size / 64; i++)
@@ -35,7 +35,7 @@ public:
 
     inline void writeBuffer(int count)
     {
-        sram.WriteByteArray(address + ptr * 4, (uint8_t*)buffer, count * 4);
+        Polygons::sram.WriteByteArray(address + ptr * 4, (uint8_t*)buffer, count * 4);
     }
 
     inline void write(int32_t* source, int count)
@@ -66,12 +66,12 @@ public:
             uint count1 = endAddress - size;
             uint count2 = count - count1;
             uint readPtr2 = (readPtr + count1) & sizeMask;
-            sram.ReadByteArray(address + readPtr * 4, (uint8_t*)dest, count1 * 4);
-            sram.ReadByteArray(address + readPtr2 * 4, (uint8_t*)&dest[count1], count2 * 4);
+            Polygons::sram.ReadByteArray(address + readPtr * 4, (uint8_t*)dest, count1 * 4);
+            Polygons::sram.ReadByteArray(address + readPtr2 * 4, (uint8_t*)&dest[count1], count2 * 4);
         }
         else
         {
-            sram.ReadByteArray(address + readPtr * 4, (uint8_t*)dest, count * 4);
+            Polygons::sram.ReadByteArray(address + readPtr * 4, (uint8_t*)dest, count * 4);
         }
     }
 };

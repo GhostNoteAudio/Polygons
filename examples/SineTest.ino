@@ -1,5 +1,5 @@
 #include "Arduino.h"
-#include "Tritium.h"
+#include "Polygons.h"
 
 double gain = 0.0;
 int freq = 400;
@@ -46,14 +46,14 @@ void setup()
 {
     Serial.begin(115200);
     pinMode(LED_BUILTIN,OUTPUT);
-    tritium_init();
+    Polygons::init();
 
     //cctrl.enableLoopbackAdc();
     //Serial.println("loopback enabled.");
 
     //cctrl.dacVolume(-20, -20);
     //cctrl.adcGain(-24, -24);
-    cctrl.lineOutGain(0, 0, false);
+    Polygons::codec.lineOutGain(0, 0, false);
 
     i2sAudioCallback = audioCallbackMute;
 }
@@ -70,7 +70,7 @@ void processMessage()
 
     auto key = strtok (data,",");
     auto val = strtok (NULL, ",");
-    char **ptr;
+    char **ptr = 0;
     auto value = strtol(val, ptr, 10);
 
     if (strcmp(key, "gain")==0)
@@ -95,7 +95,7 @@ void processMessage()
     {
         Serial.print("ADC Gain:");
         Serial.println(value);
-        cctrl.analogInGain(value, value);
+        Polygons::codec.analogInGain(value, value);
     }
 }
 
@@ -131,10 +131,6 @@ void loop()
         Serial.println(maxInput, 10);
         minInput = 999999;
         maxInput = -999999;
-
-        //auto total = Timers::GetAvg(Timers::TIMER_TOTAL) / Timers::GetAvgPeriod() * 100.0f;
-        //Serial.print("Timer: ");
-        //Serial.println(total);
     }
 
     readInput();

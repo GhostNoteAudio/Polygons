@@ -1,23 +1,31 @@
 #pragma once
 
-#include <Adafruit_GFX.h>
-#include "Teensy4i2s.h"
-#include "midiProcessing.h"
-#include "SRAMsimple.h"
-
-#define P_MIDI_RX 0
-#define P_MIDI_TX 1
-#define P_SPI_CS 10
+#define P_UART_RX 0 // Serial1
+#define P_UART_TX 1
+#define P_I2S_DOUT 7
+#define P_I2S_DIN 8
+#define P_SPI_SD_CS 9
+#define P_SPI_SRAM_CS 10
 #define P_SPI_DOUT 11
 #define P_SPI_DIN 12
 #define P_SPI_CLK 13
-#define P_LATCH_ANALOG 14
-#define P_LATCH_DIGITAL 15
+#define P_MIDI_TX 14 // Serial3
+#define P_MIDI_RX 15
+#define P_EXP_IN 16
+#define P_DAC_RESET 17
 #define P_SDA 18
 #define P_SCL 19
+#define P_I2S_LRCLK 20
+#define P_I2S_BCLK 21
+#define P_I2S_MCLK 23
 
 #define I2C_ADDR_CODEC 0x18
-#define I2C_ADDR_EEPROM 0x54
+
+#include <Adafruit_GFX.h>
+#include "Teensy4i2s.h"
+#include "midiProcessing.h"
+#include "storage.h"
+#include "SRAMsimple.h"
 
 namespace Polygons
 {
@@ -26,7 +34,7 @@ namespace Polygons
         Digital,
         Encoder,
         Analog,
-        AnalogFast
+        Expression,
     };
 
     const int CONTROL_COUNT = 64;
@@ -37,7 +45,7 @@ namespace Polygons
         int32_t Encoder[CONTROL_COUNT]; // $EN
         int8_t EncoderDelta[CONTROL_COUNT]; // $EN
         uint16_t Analog[CONTROL_COUNT]; // $AN
-        uint16_t AnalogFast[CONTROL_COUNT]; // $AF
+        uint16_t Expression; // $EX
 
         bool DigitalOut[CONTROL_COUNT]; // $DO
         uint16_t AnalogOut[CONTROL_COUNT]; // $AO
@@ -50,6 +58,7 @@ namespace Polygons
 
         // Processes data from the UART buffer and updates the control matrix with new values
         // call from audio processing loop
+        // Todo: Also read ADC on teensy for Expression input
         static void readUpdates();
 
         ControlMatrix();

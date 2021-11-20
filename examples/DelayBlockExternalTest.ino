@@ -1,9 +1,7 @@
+#include "Polygons.h"
 #include "blocks/DelayBlockExternal.h"
-#include "SRAMsimple.h"
-#include "Arduino.h"
-#include "Tritium.h"
 
-DMAMEM DelayBlockExternal <32768, AUDIO_BLOCK_SAMPLES> d1(0);
+DMAMEM DelayBlockExternal<32768, AUDIO_BLOCK_SAMPLES> d1(0);
 int32_t buffer[AUDIO_BLOCK_SAMPLES] = {0};
 void audioCallback(int32_t** inputs, int32_t** outputs)
 {
@@ -29,11 +27,8 @@ void audioCallback(int32_t** inputs, int32_t** outputs)
 void setup()
 {
     Serial.begin(115200);
-    tritium_init();
-
-    
+    Polygons::init();    
     d1.init();
-
     i2sAudioCallback = audioCallback;
 }
 

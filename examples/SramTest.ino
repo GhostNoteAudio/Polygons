@@ -1,10 +1,5 @@
-#include "SRAMsimple.h"
-#include "Arduino.h"
-#include "Tritium.h"
+#include "Polygons.h"
 
-
-#define CSPIN 10       // Default Chip Select Line for Uno (change as needed)
-SRAMsimple sram;       //initialize an instance of this class
 byte data[128];
 byte data2[128];
 
@@ -12,46 +7,45 @@ void setup()
 {
     Serial.begin(115200);
     pinMode(LED_BUILTIN,OUTPUT);
-    tritium_init();
+    Polygons::init();
 
-    cctrl.lineOutGain(0, 0, false);
+    Polygons::codec.lineOutGain(0, 0, false);
 
     for(uint i=0; i<sizeof(data); i++)
     {
-    data[i] = i;
+        data[i] = i;
     }
 
-    uint32_t address = 0;                       // create a 32 bit variable to hold the address (uint32_t=long)
-    Serial.begin(9600);                         // set communication speed for the serial monitor
-    SPI.begin();                                // start communicating with the memory chip
-
+    uint32_t address = 0;
+    Serial.begin(115200); 
+    SPI.begin();
     SPI.beginTransaction(SPISettings(20000000, MSBFIRST, SPI_MODE0));
     int a = micros();
 
-    sram.WriteByteArray(address, data, sizeof(data));
+    Polygons::sram.WriteByteArray(address, data, sizeof(data));
 
     int b = micros();
 
-    sram.ReadByteArray(address, data2, sizeof(data2)); 
+    Polygons::sram.ReadByteArray(address, data2, sizeof(data2)); 
 
     int c = micros();
 
     SPI.endTransaction();
     Serial.print("Write time: ");
-    Serial.println(b-a);
+    Serial.print(b-a);
+    Serial.println(" microseconds");
 
     Serial.print("Read time: ");
-    Serial.println(c-b);
+    Serial.print(c-b);
+    Serial.println(" microseconds");
 
-    Serial.println(data2[0]);
-    Serial.println(data2[32]);
-    Serial.println(data2[64]);
-    Serial.println(data2[127]);
+    for(uint i=0; i<sizeof(data2); i++)
+    {
+        Serial.println(data2[i]);
+    }
 }
 
 void loop()
 {
-    delay(500);
-    // pinMode(P_SPI_CS, OUTPUT);
-    // digitalWrite(P_SPI_CS, LOW);
+
 }

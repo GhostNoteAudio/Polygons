@@ -1,34 +1,40 @@
-#include "blocks/DelayBlockExternal.h"
 #include "SRAMsimple.h"
 #include "Arduino.h"
-#include "Tritium.h"
+#include "Polygons.h"
+
+using namespace Polygons::Midi;
+int lastUpdate = 0;
+
+void handleMidi(byte type, byte channel, byte data1, byte data2, bool usbMidi)
+{
+    Serial.print("Midi message: 0x");
+    Serial.print(type, 16);
+    Serial.print(", Channel: ");
+    Serial.print(channel);
+    Serial.print(", Data: ");
+    Serial.print(data1, 16);
+    Serial.print(" ");
+    Serial.print(data2, 16);
+    Serial.print(" - USB Midi: ");
+    Serial.println(usbMidi);
+}
 
 void setup()
 {
-    Serial.begin(115200);
-    Serial1.begin(31250);
+    Polygons::init();
 }
 
-int lastUpdate = 0;
 void loop()
 {
-    if (Serial1.available() >= 3) {
-        byte data[3];
-        Serial1.readBytes(data, 3);
-        Serial.print("Message received: ");
-        Serial.print(data[0]);
-        Serial.print(", ");
-        Serial.print(data[1]);
-        Serial.print(", ");
-        Serial.println(data[2]);
-    }
+    midiReceivedCallback = handleMidi;
+    readMidi();
 
     int time = millis();
     if (time - lastUpdate >= 500)
     {
-        Serial.println("Banging data");
-        byte data2[3] = { 0xB0, 0x01, 0x30};
-        Serial1.write(data2, 3);
+        Serial.println("Sending some midi data to both USB and hardware ports...");
+        sendMidi(0xB0, 1, 2, 3, false);
+        sendMidi(0xB0, 2, 4, 5, true);
         lastUpdate = time;
     }
 }

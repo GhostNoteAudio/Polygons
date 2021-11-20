@@ -1,10 +1,7 @@
+#include "Polygons.h"
 #include "blocks/DelayBlock.h"
 #include "SRAMsimple.h"
-#include "Arduino.h"
-#include "Tritium.h"
 
-
-#define CSPIN 10       // Default Chip Select Line for Uno (change as needed)
 SRAMsimple sram;       //initialize an instance of this class
 
 DMAMEM DelayBlock <32768> d1(0);
@@ -28,9 +25,9 @@ void setup()
 {
     Serial.begin(115200);
     pinMode(LED_BUILTIN,OUTPUT);
-    tritium_init();
+    Polygons::init();
 
-    cctrl.lineOutGain(0, 0, false);
+    Polygons::codec.lineOutGain(0, 0, false);
 
     i2sAudioCallback = audioCallback;
 }
