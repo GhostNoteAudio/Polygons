@@ -1,34 +1,20 @@
+#include "PolygonsBase.h"
+#include "storage.h"
 #include <Base64.h>
-#include "Arduino.h"
-#include "Polygons.h"
 
 namespace Polygons
 {
     AudioControlTLV320AIC3204 codec;
     SRAMsimple sram;
-    ControlMatrix controls;
+    GFXcanvas1 canvas256(256, 64);
+    GFXcanvas1 canvas128(128, 64);
+    bool useLargeDisplay;
 
-    void (*ControlMatrix::onUpdate)(ControlType type, int index);
-    GFXcanvas1 canvas(256, 64);
+    // big enough to encode 256*64 canvas
     char encodedString[2750];
 
     char ser_buffer[128];
     int ser_bufferIndex;
-
-    ControlMatrix::ControlMatrix()
-    {
-        this->onUpdate = 0;
-        this->Expression = 0;
-        for (size_t i = 0; i < CONTROL_COUNT; i++)
-        {
-            this->Digital[i] = 0;
-            this->Encoder[i] = 0;
-            this->Analog[i] = 0;
-            this->EncoderDelta[i] = 0;
-            this->DigitalOut[i] = 0;
-            this->AnalogOut[i] = 0;
-        }
-    }
 
     void enableCodec()
     { 
@@ -51,6 +37,7 @@ namespace Polygons
         // pinMode(P_MIDI_RX, INPUT);
         // pinMode(P_MIDI_TX, OUTPUT);
         
+        pinMode(P_FX_BYPASS, OUTPUT);
         pinMode(P_EXP_IN, INPUT);
         pinMode(P_DAC_RESET, OUTPUT);
         
@@ -60,11 +47,11 @@ namespace Polygons
 
     void init()
     {
+        useLargeDisplay = true;
+
         Serial.begin(115200);
         Serial1.begin(115200);
         Serial3.begin(31250);
-
-        controls.onUpdate = 0;
 
         Serial.println("Setting pin modes...");
         setPinModes();
@@ -87,36 +74,29 @@ namespace Polygons
         codec.analogInGain(0, 0);
         codec.headphoneGain(0, 0, false);
         codec.lineOutGain(0, 0, false);
-        codec.enableLoopbackAdc();
+        //codec.enableLoopbackAdc();
         Serial.println("Codec ready.");
+
+        Storage::InitStorage();
     }
 
-    GFXcanvas1* getCanvas()
-    {
-        return &canvas;
-    }
-
-    void ControlMatrix::pushDigital(uint8_t index, bool value)
+    void pushDigital(uint8_t index, bool value)
     {
         Serial.print("$DO,");
         Serial.print(index);
         Serial.print(",");
         Serial.println(value);
-
-        controls.DigitalOut[index] = value;
     }
 
-    void ControlMatrix::pushAnalog(uint8_t index, uint16_t value)
+    void pushAnalog(uint8_t index, uint16_t value)
     {
         Serial.print("$AO,");
         Serial.print(index);
         Serial.print(",");
         Serial.println(value);
-
-        controls.AnalogOut[index] = value;
     }
 
-    void ControlMatrix::readUpdates()
+    ParameterUpdate getUpdate()
     {
         while (Serial.available() > 0)
         {
@@ -134,35 +114,54 @@ namespace Polygons
                 int id = strtol(val, ptr, 10);
                 val = strtok (NULL, ",");
                 int value = strtol(val, ptr, 10);
-                ControlType type = (ControlType)(-1);
+                MessageType type = MessageType::None;
 
                 if (strcmp(key, "$DI") == 0)
                 {
-                    controls.Digital[id] = value != 0;
-                    type = ControlType::Digital;
+                    type = MessageType::Digital;
                 }
                 else if (strcmp(key, "$EN") == 0)
                 {
-                    controls.EncoderDelta[id] = value;
-                    controls.Encoder[id] += value;
-                    type = ControlType::Encoder;
+                    type = MessageType::Encoder;
                 }
                 else if (strcmp(key, "$AN") == 0)
                 {
-                    controls.Analog[id] = value;
-                    type = ControlType::Analog;
+                    type = MessageType::Analog;
+                }
+                else if (strcmp(key, "$CB") == 0)
+                {
+                    type = MessageType::ControlBoard;
                 }
 
-                if (controls.onUpdate)
-                    controls.onUpdate(type, id);
+                return ParameterUpdate(type, id, value);
             }
         }
+
+        return ParameterUpdate();
+    }
+
+    int getAnalogFast()
+    {
+        int expValue = analogRead(2);
+        return expValue;
+    }
+
+    void setBypass(bool bypass)
+    {
+        digitalWrite(P_FX_BYPASS, bypass ? 1 : 0);
+    }
+
+    GFXcanvas1* getCanvas()
+    {
+        return useLargeDisplay ? &canvas256 : &canvas128;
     }
 
     void pushDisplay()
     {
-        auto buf = canvas.getBuffer();
-        Base64.encode(encodedString, (char*)buf, 2048);
+        auto canvas = getCanvas();
+        int dataSize = (canvas->width() * canvas->height()) / 8;
+        auto buf = canvas->getBuffer();
+        Base64.encode(encodedString, (char*)buf, dataSize);
         Serial.print("$SC,");
         Serial.println(encodedString);
     }

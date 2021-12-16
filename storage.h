@@ -1,6 +1,5 @@
 #pragma once
 
-#include "Polygons.h"
 #include <SdFat.h>
 #include <stdint.h>
 

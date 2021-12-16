@@ -1,4 +1,5 @@
 #include "storage.h"
+#include "PolygonsBase.h"
 
 namespace Polygons
 {
