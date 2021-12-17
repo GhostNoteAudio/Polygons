@@ -1,6 +1,11 @@
 #pragma once
 #include "Polygons.h"
 
+constexpr bool powerOf2(int n)
+{
+    return (n & (n - 1)) == 0;
+}
+
 template<uint S, uint B> // S must be power of 2, S must be multiple of B
 class DelayBlockExternal
 {
@@ -14,6 +19,9 @@ class DelayBlockExternal
 public:
     inline DelayBlockExternal(int addess)
     {
+        static_assert(powerOf2(S), "S must be power of 2");
+        static_assert(S % B == 0, "S must be maultiple of B");
+        
         this->address = address;
         this->size = S;
         this->blocksize = B;

@@ -62,17 +62,6 @@ namespace Polygons
             Parameters[idx].EncoderDelta = encoderDelta;
         }
 
-        /*int getParamPage(int page, int pagePos)
-        {
-            for (size_t i = 0; i < 256; i++)
-            {
-                if (Parameters[i].Mode == ControlMode::Paged && Parameters[i].Index == page * 8 + pagePos)
-                    return i;
-            }
-
-            return -1;
-        }*/
-
         int getParamEncoded(int absIndex)
         {
             for (size_t i = 0; i < 256; i++)
