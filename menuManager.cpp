@@ -13,12 +13,12 @@ namespace Polygons
 
         getPageName = [](int page, char* dest)
         {
-            sprintf(dest, "PAGE%d", page);
+            sprintf(dest, "Page %d", page);
         };
 
         getParameterName = [](int paramId, char* dest) 
         {
-            sprintf(dest, "PAR%d", (paramId));
+            sprintf(dest, "Param %d", paramId);
         };
 
         getParameterDisplay = [](int paramId, char* dest)

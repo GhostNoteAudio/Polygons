@@ -8,7 +8,7 @@
 // 48Khz samplerate
 // 10k passband, 2db ripple
 // 12k stopband, ~60db attenuation
-float brickwall10k[47] = { 
+static float brickwall10k[47] = { 
     1.8778637971e-02,  9.0682700443e-02,  2.2496738427e-01,
     3.5236026405e-01,  3.5019837609e-01,  1.6810484765e-01,
     -7.5711270130e-02, -1.8063601091e-01, -7.7071506630e-02,
@@ -25,58 +25,4 @@ float brickwall10k[47] = {
     1.4058310829e-03, -1.8653011187e-03, -1.3632049551e-03,
     9.9271473487e-04,  1.6854051611e-03,  7.6429775735e-04,
     5.9391382760e-05,  1.2742799955e-06
-};
-
-
-constexpr bool powerOf2(int n)
-{
-    return (n & (n - 1)) == 0;
-}
-
-// N must be factor of 2!
-template<int N>
-class Fir
-{
-	const int mask = N - 1;
-	unsigned int bufIdx = 0;
-public:
-	float Buffer[N] = { 0 };
-	float* Kernel;
-	unsigned int KernelSize;
-
-	Fir(float* kernel, unsigned int kernelSize)
-	{
-        static_assert(powerOf2(N), "N must be power of 2");
-        if (kernelSize > N)
-        {
-            Kernel = 0;
-            KernelSize = 0;
-            return;
-        }
-
-		Kernel = kernel;
-		KernelSize = kernelSize;
-	}
-
-    void ClearBuffers()
-    {
-        for (size_t i = 0; i < N; i++)
-        {
-            Buffer[i] = 0.0;
-        }
-    }
-
-	float Process(float input)
-	{
-		Buffer[bufIdx & mask] = input;
-		float outputSample = 0;
-		for (size_t k = 0; k < KernelSize; k++)
-		{
-			unsigned int readIdx = bufIdx - k;
-			outputSample += Kernel[k] * Buffer[readIdx & mask];
-		}
-
-		bufIdx++;
-		return outputSample;
-	}
 };

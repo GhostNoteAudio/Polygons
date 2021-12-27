@@ -33,7 +33,7 @@ namespace Polygons
             buffer[i] = 0;
     }
 
-    static inline void Copy(float* source, float* dest, int len)
+    static inline void Copy(float* dest, float* source, int len)
     {
 
         memcpy(dest, source, len * sizeof(float));

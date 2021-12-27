@@ -1,29 +1,20 @@
 #pragma once
 #include "../Polygons.h"
 
-constexpr bool powerOf2(int n)
-{
-    return (n & (n - 1)) == 0;
-}
-
-template<uint S> // S must be power of 2!!
+template<uint S>
 class DelayBlock
 {
     int32_t address;
     uint32_t size;
     uint32_t ptr;
-    uint32_t sizeMask;
     float data[S];
 
 public:
     inline DelayBlock(int addess)
     {
-        static_assert(powerOf2(S), "S must be power of 2");
-
         this->address = address;
         this->size = S;
         ptr = 0;
-        sizeMask = size - 1;
         for (size_t i = 0; i < size; i++)
             data[i] = 0;        
     }
@@ -32,7 +23,7 @@ public:
     {
         for (int i = 0; i < count; i++)
         {
-            uint writePtr = (ptr + i) & sizeMask;
+            uint writePtr = (ptr + i) % S;
             data[writePtr] = source[i];
         }
     }
@@ -42,7 +33,7 @@ public:
         float scaler = (float)(1.0 / (double)SAMPLE_32_MAX);
         for (int i = 0; i < count; i++)
         {
-            uint writePtr = (ptr + i) & sizeMask;
+            uint writePtr = (ptr + i) % S;
             data[writePtr] = source[i] * scaler;
         }
     }
@@ -51,21 +42,21 @@ public:
     {
         for (int i = 0; i < count; i++)
         {
-            uint writePtr = (ptr + i) & sizeMask;
+            uint writePtr = (ptr + i) % S;
             data[writePtr] += source[i] * gain;
         }
     }
 
     inline void updatePtr(int increment)
     {
-        ptr = (ptr + increment) & sizeMask;
+        ptr = (ptr + increment) % S;
     }
 
     inline void read(float* dest, uint32_t delay, int count)
     {
         for (int i = 0; i < count; i++)
         {
-            uint readPtr = ((int)ptr - (int)delay + i + size) & sizeMask;
+            uint readPtr = ((int)ptr - (int)delay + i + size) % S;
             dest[i] = data[readPtr];
         }
     }
@@ -74,7 +65,7 @@ public:
     {
         for (int i = 0; i < count; i++)
         {
-            uint readPtr = ((int)ptr - (int)delay + i + size) & sizeMask;
+            uint readPtr = ((int)ptr - (int)delay + i + size) % S;
             dest[i] = data[readPtr] * SAMPLE_32_MAX;
         }
     }

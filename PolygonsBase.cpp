@@ -78,6 +78,7 @@ namespace Polygons
         Serial.println("Codec ready.");
 
         Storage::InitStorage();
+        setBypass(0);
     }
 
     void pushDigital(uint8_t index, bool value)
