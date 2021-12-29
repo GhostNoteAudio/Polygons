@@ -115,7 +115,7 @@ namespace Polygons
                 if (paramId >= 0)
                 {
                     int newVal = Parameters[paramId].Value + Parameters[paramId].EncoderDelta * value;
-                    newVal = Clip(newVal, 0, Parameters[paramId].MaxValue);
+                    newVal = ClipI(newVal, 0, Parameters[paramId].MaxValue);
                     Parameters[paramId].Value = newVal;
                     if (SetParameterCallback != 0)
                         SetParameterCallback(paramId, newVal);

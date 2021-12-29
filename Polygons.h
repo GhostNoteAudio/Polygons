@@ -29,3 +29,4 @@
 #include "midiProcessing.h"
 #include "PolygonsBase.h"
 #include "PolyOS.h"
+#include "Buffers.h"

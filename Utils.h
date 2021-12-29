@@ -11,12 +11,12 @@ namespace Polygons
         return value > 1 ? 1 : (value < -1 ? -1 : value);
     }
 
-    static inline float Clip(float value, float min, float max)
+    static inline float ClipF(float value, float min, float max)
     {
         return value > max ? max : (value < min ? min : value);
     }
 
-    static inline int Clip(int value, int min, int max)
+    static inline int ClipI(int value, int min, int max)
     {
         return value > max ? max : (value < min ? min : value);
     }

@@ -83,98 +83,134 @@ namespace Polygons
 		return bVec;
 	}
 
+	// this is the newer set of formulas from http://www.earlevel.com/main/2011/01/02/biquad-formulas/
+	// Note that for shelf and peak filters, I had to invert the if/else statements for boost and cut, as
+	// I was getting the inverse desired effect, very odd...
 	void Biquad::Update()
 	{
-		float omega = 2.0f * M_PI * Frequency / samplerate;
-		float sinOmega = sinf(omega);
-		float cosOmega = cosf(omega);
+		auto Fc = Frequency;
+		auto Fs = samplerate;
 
-		float sqrtGain = 0.0f;
-		float alpha = 0.0f;
-
-		if (Type == FilterType::LowShelf || Type == FilterType::HighShelf)
-		{
-			alpha = sinOmega / 2.0f * sqrtf((gain + 1.0f / gain) * (1.0f / Slope - 1) + 2);
-			sqrtGain = sqrtf(gain);
-		}
-		else
-		{
-			alpha = sinOmega / (2.0f * _q);
-		}
+		auto V = powf(10, fabs(GetGainDb()) / 20);
+		auto K = tanf(M_PI * Fc / Fs);
+		auto Q = _q;
+		double norm = 1.0;
 
 		switch (Type)
 		{
+		case FilterType::LowPass6db:
+			a1 = -expf(-2.0 * M_PI * (Fc / Fs));
+			b0 = 1.0 + a1;
+			b1 = b2 = a2 = 0;
+			break;
+		case FilterType::HighPass6db:
+			a1 = -expf(-2.0 * M_PI * (Fc / Fs));
+			b0 = a1;
+			b1 = -a1;
+			b2 = a2 = 0;
+			break;
 		case FilterType::LowPass:
-			b0 = (1 - cosOmega) / 2;
-			b1 = 1 - cosOmega;
-			b2 = (1 - cosOmega) / 2;
-			a0 = 1 + alpha;
-			a1 = -2 * cosOmega;
-			a2 = 1 - alpha;
+			norm = 1 / (1 + K / Q + K * K);
+			b0 = K * K * norm;
+			b1 = 2 * b0;
+			b2 = b0;
+			a1 = 2 * (K * K - 1) * norm;
+			a2 = (1 - K / Q + K * K) * norm;
 			break;
 		case FilterType::HighPass:
-			b0 = (1 + cosOmega) / 2;
-			b1 = -(1 + cosOmega);
-			b2 = (1 + cosOmega) / 2;
-			a0 = 1 + alpha;
-			a1 = -2 * cosOmega;
-			a2 = 1 - alpha;
+			norm = 1 / (1 + K / Q + K * K);
+			b0 = 1 * norm;
+			b1 = -2 * b0;
+			b2 = b0;
+			a1 = 2 * (K * K - 1) * norm;
+			a2 = (1 - K / Q + K * K) * norm;
 			break;
 		case FilterType::BandPass:
-			b0 = alpha;
+			norm = 1 / (1 + K / Q + K * K);
+			b0 = K / Q * norm;
 			b1 = 0;
-			b2 = -alpha;
-			a0 = 1 + alpha;
-			a1 = -2 * cosOmega;
-			a2 = 1 - alpha;
+			b2 = -b0;
+			a1 = 2 * (K * K - 1) * norm;
+			a2 = (1 - K / Q + K * K) * norm;
 			break;
 		case FilterType::Notch:
-			b0 = 1;
-			b1 = -2 * cosOmega;
-			b2 = 1;
-			a0 = 1 + alpha;
-			a1 = -2 * cosOmega;
-			a2 = 1 - alpha;
+			norm = 1 / (1 + K / Q + K * K);
+			b0 = (1 + K * K) * norm;
+			b1 = 2 * (K * K - 1) * norm;
+			b2 = b0;
+			a1 = b1;
+			a2 = (1 - K / Q + K * K) * norm;
 			break;
 		case FilterType::Peak:
-			b0 = 1 + (alpha * gain);
-			b1 = -2 * cosOmega;
-			b2 = 1 - (alpha * gain);
-			a0 = 1 + (alpha / gain);
-			a1 = -2 * cosOmega;
-			a2 = 1 - (alpha / gain);
+			if (GetGainDb() >= 0)
+			{
+				norm = 1 / (1 + 1 / Q * K + K * K);
+				b0 = (1 + V / Q * K + K * K) * norm;
+				b1 = 2 * (K * K - 1) * norm;
+				b2 = (1 - V / Q * K + K * K) * norm;
+				a1 = b1;
+				a2 = (1 - 1 / Q * K + K * K) * norm;
+			}
+			else
+			{
+				norm = 1 / (1 + V / Q * K + K * K);
+				b0 = (1 + 1 / Q * K + K * K) * norm;
+				b1 = 2 * (K * K - 1) * norm;
+				b2 = (1 - 1 / Q * K + K * K) * norm;
+				a1 = b1;
+				a2 = (1 - V / Q * K + K * K) * norm;
+			}
 			break;
 		case FilterType::LowShelf:
-			b0 = gain * ((gain + 1) - (gain - 1) * cosOmega + 2 * sqrtGain * alpha);
-			b1 = 2 * gain * ((gain - 1) - (gain + 1) * cosOmega);
-			b2 = gain * ((gain + 1) - (gain - 1) * cosOmega - 2 * sqrtGain * alpha);
-			a0 = (gain + 1) + (gain - 1) * cosOmega + 2 * sqrtGain * alpha;
-			a1 = -2 * ((gain - 1) + (gain + 1) * cosOmega);
-			a2 = (gain + 1) + (gain - 1) * cosOmega - 2 * sqrtGain * alpha;
+			if (GetGainDb() >= 0)
+			{
+				norm = 1 / (1 + sqrtf(2) * K + K * K);
+				b0 = (1 + sqrtf(2 * V) * K + V * K * K) * norm;
+				b1 = 2 * (V * K * K - 1) * norm;
+				b2 = (1 - sqrtf(2 * V) * K + V * K * K) * norm;
+				a1 = 2 * (K * K - 1) * norm;
+				a2 = (1 - sqrtf(2) * K + K * K) * norm;
+			}
+			else
+			{
+				norm = 1 / (1 + sqrtf(2 * V) * K + V * K * K);
+				b0 = (1 + sqrtf(2) * K + K * K) * norm;
+				b1 = 2 * (K * K - 1) * norm;
+				b2 = (1 - sqrtf(2) * K + K * K) * norm;
+				a1 = 2 * (V * K * K - 1) * norm;
+				a2 = (1 - sqrtf(2 * V) * K + V * K * K) * norm;
+			}
 			break;
 		case FilterType::HighShelf:
-			b0 = gain * ((gain + 1) + (gain - 1) * cosOmega + 2 * sqrtGain * alpha);
-			b1 = -2 * gain * ((gain - 1) + (gain + 1) * cosOmega);
-			b2 = gain * ((gain + 1) + (gain - 1) * cosOmega - 2 * sqrtGain * alpha);
-			a0 = (gain + 1) - (gain - 1) * cosOmega + 2 * sqrtGain * alpha;
-			a1 = 2 * ((gain - 1) - (gain + 1) * cosOmega);
-			a2 = (gain + 1) - (gain - 1) * cosOmega - 2 * sqrtGain * alpha;
+			if (GetGainDb() >= 0)
+			{
+				norm = 1 / (1 + sqrtf(2) * K + K * K);
+				b0 = (V + sqrtf(2 * V) * K + K * K) * norm;
+				b1 = 2 * (K * K - V) * norm;
+				b2 = (V - sqrtf(2 * V) * K + K * K) * norm;
+				a1 = 2 * (K * K - 1) * norm;
+				a2 = (1 - sqrtf(2) * K + K * K) * norm;
+			}
+			else
+			{
+				norm = 1 / (V + sqrtf(2 * V) * K + K * K);
+				b0 = (1 + sqrtf(2) * K + K * K) * norm;
+				b1 = 2 * (K * K - 1) * norm;
+				b2 = (1 - sqrtf(2) * K + K * K) * norm;
+				a1 = 2 * (K * K - V) * norm;
+				a2 = (V - sqrtf(2 * V) * K + K * K) * norm;
+			}
 			break;
 		}
-
-		float g = 1 / a0;
-
-		b0 = b0 * g;
-		b1 = b1 * g;
-		b2 = b2 * g;
-		a1 = a1 * g;
-		a2 = a2 * g;
 	}
 
 	float Biquad::GetResponse(float freq)
 	{
-		float phi = powf((sinf(2 * M_PI * freq / (2.0 * samplerate))), 2);
-		return (powf(b0 + b1 + b2, 2.0) - 4.0 * (b0 * b1 + 4.0 * b0 * b2 + b1 * b2) * phi + 16.0 * b0 * b2 * phi * phi) / (powf(1.0 + a1 + a2, 2.0) - 4.0 * (a1 + 4.0 * a2 + a1 * a2) * phi + 16.0 * a2 * phi * phi);
+		double phi = powf((sinf(2 * M_PI * freq / (2.0 * samplerate))), 2);
+		double y = ((powf(b0 + b1 + b2, 2.0) - 4.0 * (b0 * b1 + 4.0 * b0 * b2 + b1 * b2) * phi + 16.0 * b0 * b2 * phi * phi) / (powf(1.0 + a1 + a2, 2.0) - 4.0 * (a1 + 4.0 * a2 + a1 * a2) * phi + 16.0 * a2 * phi * phi));
+		// y gives you power gain, not voltage gain, and this a 10 * log_10(g) formula instead of 20 * log_10(g)
+		// by taking the sqrt we get a value that's more suitable for signal processing, i.e. the voltage gain
+		return sqrtf(y);
 	}
 
 	void Biquad::ClearBuffers() 

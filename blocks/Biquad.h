@@ -7,7 +7,9 @@ namespace Polygons
 	public:
 		enum class FilterType
 		{
-			LowPass = 0,
+			LowPass6db = 0,
+			HighPass6db,
+			LowPass,
 			HighPass,
 			BandPass,
 			Notch,
