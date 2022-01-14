@@ -77,4 +77,45 @@ namespace Polygons
     {
         return std::min((std::pow(100, input) - 1.0) * 0.01010101010101, 1.0);
     }
+
+    // Truncates the end of an IR using a cosine window
+    static inline void TruncateCos(float* data, int dataSize, float fraction)
+    {
+        int sample_count = (int)(fraction * dataSize);
+        int offset = dataSize - sample_count;
+        for (int i = 0; i < dataSize; i++)
+        {
+            data[offset + i] *= cosf(i / (float)sample_count * M_PI*0.5);
+        }
+    }
+
+    static inline void ApplyHamming(float* buffer, int M)
+    {
+        for (int n = 0; n < M; n++)
+        {
+            float val = 0.42 - 0.5 * cosf(2*M_PI * n / (double)M) + 0.08 * cosf(4 * M_PI * n / (double)M);
+            buffer[n] *= val;
+        }
+    }
+
+    static inline float Sinc(float x)
+    {
+        return x == 0 ? 1 : sinf(M_PI*x) / (M_PI*x);
+    }
+
+    // Note: choose N as an odd number
+    static inline void MakeSincFilter(float* buffer, int N, float fmin, float fmax, int Fs)
+    {
+        fmin = fmin / (Fs*0.5);
+        fmax = fmax / (Fs*0.5);
+
+        for (int i = 0; i < N; i++)
+        {
+            int x = i - N/2;
+            float val = fmax * Sinc(x * fmax) - fmin*Sinc(x * fmin);
+            buffer[i] = val;
+        }
+
+        ApplyHamming(buffer, N);
+    }
 }

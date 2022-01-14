@@ -1,3 +1,5 @@
+#pragma once
+
 #define BUFFER_COUNT 16
 
 namespace Polygons

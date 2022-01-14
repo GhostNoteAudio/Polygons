@@ -27,6 +27,7 @@ namespace Polygons
         
         bool (*HandleUpdateCallback)(ParameterUpdate* update);
         void (*SetParameterCallback)(uint8_t paramId, uint16_t value);
+        void (*CustomDrawCallback)();
         uint8_t PageCount;
         int SelectedPage;
 
@@ -44,6 +45,7 @@ namespace Polygons
             
             HandleUpdateCallback = 0;
             SetParameterCallback = 0;
+            CustomDrawCallback = 0;
             controlBoard = ControlBoard::Alpha;
         }
 
@@ -196,6 +198,9 @@ namespace Polygons
                 MenuManagerDrawing::DrawSigmaMenu(getMenu());
             // else // no menu to be drawn, control board might not have a display
 
+            if (CustomDrawCallback != 0)
+                CustomDrawCallback();
+                
             Polygons::pushDisplay();
         }
     };

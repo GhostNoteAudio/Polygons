@@ -1,3 +1,5 @@
+#pragma once
+
 #include "arm_math.h"
 
 struct Cplx
@@ -6,7 +8,7 @@ struct Cplx
 	float Imag;
 };
 
-void ComplexMultiply(Cplx& dest, Cplx& c1, Cplx& c2)
+inline void ComplexMultiply(Cplx& dest, Cplx& c1, Cplx& c2)
 {
 	float r = c1.Real * c2.Real - c1.Imag * c2.Imag;
 	float i = c1.Real * c2.Imag + c1.Imag * c2.Real;
@@ -26,7 +28,7 @@ class ConvFFT
 	arm_cfft_radix2_instance_f32 ifftinst;
 public:
 
-	ConvFFT(unsigned int maxBlockSize)
+	inline ConvFFT(unsigned int maxBlockSize)
 	{
 		this->maxBlockSize = maxBlockSize;
 		outputIndex = 0;
@@ -34,7 +36,7 @@ public:
     	arm_cfft_radix2_init_f32(&ifftinst, N, 1, 1);
 	}
 
-	void SetKernel(float* kernel, unsigned int kernelSize)
+	inline void SetKernel(float* kernel, unsigned int kernelSize)
 	{
 		// NOTE: kernel can be at max N - maxBlockSize long, otherwise circular wrap-around would occur!
 		if (kernelSize > N - maxBlockSize)
@@ -55,9 +57,8 @@ public:
 		arm_cfft_radix2_f32(&fftinst, (float*)K);
 	}
 
-	void Process(float* input, float* output, unsigned int bufSize)
+	inline void Process(float* input, float* output, unsigned int bufSize)
 	{
-		Timers::Lap(1);
 		if (bufSize > maxBlockSize)
 		{
 			Serial.println("Trying to process a buffer that's too big!");
@@ -75,9 +76,7 @@ public:
 			X[i].Imag = 0;
 		}
 
-		Timers::Lap(2);
 		arm_cfft_radix2_f32(&fftinst, (float*)X);
-		Timers::Lap(3);
 		for (size_t i = 0; i < N; i++)
 		{
 			ComplexMultiply(X[i], X[i], K[i]);
@@ -85,7 +84,6 @@ public:
 		}
 		
 		arm_cfft_radix2_f32(&ifftinst, (float*)X);
-		Timers::Lap(4);
 		// clear out old data
 		for (size_t i = 0; i < bufSize; i++)
 		{
@@ -103,6 +101,5 @@ public:
 		}
 
 		outputIndex += bufSize;
-		Timers::Lap(5);
 	}
 };

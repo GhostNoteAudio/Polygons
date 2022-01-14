@@ -4,15 +4,13 @@
 template<uint S>
 class DelayBlock
 {
-    int32_t address;
     uint32_t size;
     uint32_t ptr;
     float data[S];
 
 public:
-    inline DelayBlock(int addess)
+    inline DelayBlock()
     {
-        this->address = address;
         this->size = S;
         ptr = 0;
         for (size_t i = 0; i < size; i++)
