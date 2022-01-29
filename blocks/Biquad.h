@@ -32,7 +32,6 @@ namespace Polygons
 		FilterType Type;
 		float Output;
 		float Frequency;
-		float Slope;
 
 		Biquad();
 		Biquad(FilterType filterType, float samplerate);

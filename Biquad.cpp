@@ -12,7 +12,6 @@ namespace Polygons
 	Biquad::Biquad(FilterType filterType, float samplerate)
 	{
 		Type = filterType;
-		Slope = 1;
 		SetSamplerate(samplerate);
 
 		SetGainDb(0.0);

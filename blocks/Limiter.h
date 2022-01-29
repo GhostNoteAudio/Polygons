@@ -60,11 +60,6 @@ namespace Polygons
             if (param < 0 || param > ParameterRatio)
                 return;
 
-            Serial.print("Setting param ");
-            Serial.print(param);
-            Serial.print(" to ");
-            Serial.println(value);
-
             if (param == ParameterThreshold)
                 threshold = DB2gain(value);
             else if (param == ParameterBoost)
