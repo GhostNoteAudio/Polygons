@@ -16,11 +16,15 @@ namespace Polygons
     enum class MessageType
     {
         None,
-        Digital,
-        Encoder,
-        Analog,
-        Expression,
-        ControlBoard,
+        Digital, // $DI
+        DigitalOut, // $DO
+        Encoder, // $EN
+        Analog, // $AN
+        Expression, // $EX
+        ControlBoard, // $CB
+        ControlBoardAck, // $CA
+        Screen, // $SC
+        Log, // $LG
     };
 
     enum class ControlBoard

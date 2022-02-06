@@ -24,6 +24,7 @@ namespace Polygons
         MenuManager menu;
         ControlBoard controlBoard;
         ParameterRegistration Parameters[256];
+        int displayUpdateCycle = 0;
         
         bool (*HandleUpdateCallback)(ParameterUpdate* update);
         void (*SetParameterCallback)(uint8_t paramId, uint16_t value);
@@ -150,6 +151,15 @@ namespace Polygons
                         SetParameterCallback(paramId, newVal);
                 }
             }
+            else if (type == MessageType::ControlBoard)
+            {
+                // control board will occasionally re-send its identifier.
+                // if the identifier matches the currently selected control board, respond with an ack
+                if (index == (int)controlBoard)
+                {
+                    SerialControl->println("$CA,1");
+                }
+            }
         }
 
         Polygons::MenuManager* getMenu()
@@ -161,28 +171,43 @@ namespace Polygons
         {
             while(true)
             {
-                Serial.println("Waiting for Control Board to send announcement...");
-                auto update = Polygons::getUpdate();
-                if (update.Type != MessageType::ControlBoard)
-                    delay(200);
-                else
+                Serial.println("Scanning hardware and USB serial ports for Control Board announcement...");
+
+                auto updateUsb = Polygons::getUpdate(&Serial);
+                auto updateHw = Polygons::getUpdate(&Serial1);
+                if (updateUsb.Type == MessageType::ControlBoard)
                 {
-                    this->controlBoard = (ControlBoard)update.Index;
+                    this->controlBoard = (ControlBoard)updateUsb.Index;
                     useLargeDisplay = this->controlBoard == ControlBoard::Alpha;
+                    SerialControl = &Serial;
+                    Serial.println("Using USB Serial for control");
                     break;
                 }
+                else if (updateHw.Type == MessageType::ControlBoard)
+                {
+                    this->controlBoard = (ControlBoard)updateHw.Index;
+                    useLargeDisplay = this->controlBoard == ControlBoard::Alpha;
+                    SerialControl = &Serial1;
+                    Serial.println("Using Hardware Serial for control");
+                    break;
+                }
+                else
+                {
+                    delay(500);
+                }
             }
-            Serial.print("Received message from Control Board: ");
+
+            Serial.print("Received Control Board ID: ");
             Serial.println((int)controlBoard);
+            SerialControl->println("$CA,1");
         }
 
         void loop()
         {
             //int expVal = getAnalogFast();
-            
             while(true)
             {
-                auto update = Polygons::getUpdate();
+                auto update = Polygons::getUpdate(SerialControl);
                 if (update.Type == MessageType::None)
                     break;
                 bool handled = false;
@@ -192,16 +217,31 @@ namespace Polygons
                     HandleUpdate(update.Type, update.Index, update.Value);
             }
 
-            if (controlBoard == ControlBoard::Alpha)
-                MenuManagerDrawing::DrawAlphaMenu(getMenu());
-            else if (controlBoard == ControlBoard::Sigma)
-                MenuManagerDrawing::DrawSigmaMenu(getMenu());
-            // else // no menu to be drawn, control board might not have a display
-
-            if (CustomDrawCallback != 0)
-                CustomDrawCallback();
+            if (displayUpdateCycle == 0)
+            {
+                if (controlBoard == ControlBoard::Alpha)
+                    MenuManagerDrawing::DrawAlphaMenu(getMenu());
+                else if (controlBoard == ControlBoard::Sigma)
+                    MenuManagerDrawing::DrawSigmaMenu(getMenu());
+                // else // no menu to be drawn, control board might not have a display
                 
-            Polygons::pushDisplay();
+                if (CustomDrawCallback != 0)
+                    CustomDrawCallback();
+            }
+          
+            for (size_t i = 0; i < 4; i++)
+            {
+                bool completed = Polygons::pushDisplay(displayUpdateCycle);
+                if (completed)
+                {
+                    displayUpdateCycle = 0;
+                    break;
+                }
+                else
+                {
+                    displayUpdateCycle++;
+                }
+            }
         }
     };
 }

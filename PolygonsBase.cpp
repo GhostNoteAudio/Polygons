@@ -1,20 +1,21 @@
+#include <string.h>
 #include "PolygonsBase.h"
 #include "storage.h"
-#include <Base64.h>
+#include "HexCompression.h"
 
 namespace Polygons
 {
+    Stream* SerialControl;
     AudioControlTLV320AIC3204 codec;
     SRAMsimple sram;
     GFXcanvas1 canvas256(256, 64);
     GFXcanvas1 canvas128(128, 64);
     bool useLargeDisplay;
 
-    // big enough to encode 256*64 canvas
-    char encodedString[2750];
-
-    char ser_buffer[128];
-    int ser_bufferIndex;
+    // This buffers incoming string commands
+    const int SerialBufferSize = 128;
+    char serialBuffer[SerialBufferSize];
+    int serialBufferIndex;
 
     void enableCodec()
     { 
@@ -48,9 +49,10 @@ namespace Polygons
     void init()
     {
         useLargeDisplay = true;
+        SerialControl = &Serial; // default to USB serial control
 
         Serial.begin(115200);
-        Serial1.begin(115200);
+        Serial1.begin(250000);
         Serial3.begin(31250);
 
         Serial.println("Setting pin modes...");
@@ -83,61 +85,131 @@ namespace Polygons
 
     void pushDigital(uint8_t index, bool value)
     {
-        Serial.print("$DO,");
-        Serial.print(index);
-        Serial.print(",");
-        Serial.println(value);
+        SerialControl->print("$DO,");
+        SerialControl->print(index);
+        SerialControl->print(",");
+        SerialControl->println(value);
+        delayMicroseconds(20);
     }
 
     void pushAnalog(uint8_t index, uint16_t value)
     {
-        Serial.print("$AO,");
-        Serial.print(index);
-        Serial.print(",");
-        Serial.println(value);
+        SerialControl->print("$AO,");
+        SerialControl->print(index);
+        SerialControl->print(",");
+        SerialControl->println(value);
+        delayMicroseconds(20);
     }
 
-    ParameterUpdate getUpdate()
+    bool CheckMessageType(const char* data, const char* msgType)
     {
-        while (Serial.available() > 0)
+        auto x0 = data[0] == msgType[0];
+        auto x1 = data[1] == msgType[1];
+        auto x2 = data[2] == msgType[2];
+        return x0 && x1 && x2;
+    }
+
+    int ParseValue(const char* data, int offset = 0)
+    {
+        char temp[12] = { 0 };
+        int startIdx = -1;
+        int endIdx = -1;
+        int commasToSkip = offset + 1;
+
+        int idx = 3;
+        for (idx = 3; idx < 128; idx++)
         {
-            char val = Serial.read();
-            ser_buffer[ser_bufferIndex] = val;
-            ser_bufferIndex++;
+            if (data[idx] == 0 || data[idx] == '\n')
+            {
+                endIdx = idx - 1;
+                break;
+            }
+
+            if (data[idx] == ',')
+                commasToSkip--;
+
+            if (commasToSkip <= 0 && data[idx] == ',')
+            {
+                if (startIdx == -1)
+                    startIdx = idx + 1;
+                else
+                    endIdx = idx - 1;
+            }
+
+            if (startIdx != -1 && endIdx != -1)
+                break;
+        }
+
+        if (startIdx == -1 || endIdx == -1)
+            return 0;
+
+        if (endIdx - startIdx >= 12)
+            return 0;
+
+        memcpy(temp, &data[startIdx], endIdx - startIdx + 1);
+        return atol(temp);
+    }
+
+    ParameterUpdate getUpdate(Stream* serialControl)
+    {
+        while (serialControl->available() > 0)
+        {
+            char val = serialControl->read();
+            serialBuffer[serialBufferIndex] = val;
+            serialBufferIndex++;
+            if (serialBufferIndex == SerialBufferSize)
+            {
+                Serial.println("Serial buffer overflow, resetting!");
+                serialBufferIndex = 0;
+                return ParameterUpdate();
+            }
+
             if (val == '\n')
             {
-                ser_buffer[ser_bufferIndex-1] = 0;
-                ser_bufferIndex = 0;
-                char **ptr = 0;
+                serialBuffer[serialBufferIndex-1] = 0;
+                if (serialBuffer[serialBufferIndex-2] == '\r')
+                    serialBuffer[serialBufferIndex-2] = 0; // remove the carriage return as well, if sent
+                
+                serialBufferIndex = 0;
+                Serial.print("Received command: ");
+                Serial.println(serialBuffer);
 
-                auto key = strtok (ser_buffer, ",");
-                auto val = strtok (NULL, ",");
-                int id = strtol(val, ptr, 10);
-                val = strtok (NULL, ",");
-                int value = strtol(val, ptr, 10);
-                MessageType type = MessageType::None;
+                auto type = MessageType::None;
+                int id = 0;
+                int value = 0;
 
-                if (strcmp(key, "$DI") == 0)
+                if (CheckMessageType(serialBuffer, "$DI"))
                 {
                     type = MessageType::Digital;
+                    id = ParseValue(serialBuffer, 0);
+                    value = ParseValue(serialBuffer, 1);
                 }
-                else if (strcmp(key, "$EN") == 0)
+                else if (CheckMessageType(serialBuffer, "$EN"))
                 {
                     type = MessageType::Encoder;
+                    id = ParseValue(serialBuffer, 0);
+                    value = ParseValue(serialBuffer, 1);
                 }
-                else if (strcmp(key, "$AN") == 0)
+                else if (CheckMessageType(serialBuffer, "$AN"))
                 {
                     type = MessageType::Analog;
+                    id = ParseValue(serialBuffer, 0);
+                    value = ParseValue(serialBuffer, 1);
                 }
-                else if (strcmp(key, "$CB") == 0)
+                else if (CheckMessageType(serialBuffer, "$CB"))
                 {
                     type = MessageType::ControlBoard;
+                    id = ParseValue(serialBuffer, 0);
                 }
-
+                else if (CheckMessageType(serialBuffer, "$LG"))
+                {
+                    type = MessageType::ControlBoard;
+                    Serial.print("LOG:");
+                    Serial.println(&serialBuffer[4]);
+                }
                 return ParameterUpdate(type, id, value);
             }
         }
-
         return ParameterUpdate();
     }
 
@@ -157,13 +229,39 @@ namespace Polygons
         return useLargeDisplay ? &canvas256 : &canvas128;
     }
 
-    void pushDisplay()
+    // Call this function to push the display buffer out to serial port.
+    // Each calls will send a certain number of bytes. You must continue to call
+    // this until it returns True, indicating that all bytes in the buffer have been sent.
+    // increment the updateCycle by 1 each time, until you get a true return, then start
+    // again at zero.
+    bool pushDisplay(int updateCycle)
     {
+        char txBuf[512];
         auto canvas = getCanvas();
         int dataSize = (canvas->width() * canvas->height()) / 8;
         auto buf = canvas->getBuffer();
-        Base64.encode(encodedString, (char*)buf, dataSize);
-        Serial.print("$SC,");
-        Serial.println(encodedString);
+
+        int chunkSize = 256;
+        int bytesRemaining = dataSize - chunkSize * updateCycle;
+        int bytesToSend = bytesRemaining > chunkSize ? chunkSize : bytesRemaining;
+
+        bool completed = false;
+        SerialControl->print("$SC,");
+        SerialControl->print(updateCycle * chunkSize);
+        SerialControl->print(",");
+
+        if (bytesToSend <= 0)
+            completed = true;
+        else if (bytesRemaining == chunkSize)
+            completed = true;
+        else
+            completed = false;
+
+        int strLen = Compress(&buf[chunkSize * updateCycle], bytesToSend, txBuf);
+        SerialControl->write(txBuf, strLen);
+        SerialControl->println("");
+        delayMicroseconds(20);
+
+        return completed;
     }
 }

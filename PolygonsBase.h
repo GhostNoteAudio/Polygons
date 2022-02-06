@@ -30,6 +30,7 @@
 namespace Polygons
 {
     extern AudioControlTLV320AIC3204 codec;
+    extern Stream* SerialControl;
     extern SRAMsimple sram;
     extern GFXcanvas1 canvas256;
     extern GFXcanvas1 canvas128;
@@ -41,7 +42,7 @@ namespace Polygons
 
     // Processes data from the UART buffer and updates the control matrix with new values
     // call from audio processing loop
-    ParameterUpdate getUpdate();
+    ParameterUpdate getUpdate(Stream* serialControl);
 
     int getAnalogFast();
 
@@ -58,5 +59,5 @@ namespace Polygons
 
     GFXcanvas1* getCanvas();
 
-    void pushDisplay(); // $SC
+    bool pushDisplay(int updateCycle); // $SC
 }
