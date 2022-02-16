@@ -10,7 +10,8 @@ namespace Polygons
         Encoded,
         Analog,
         Digital,
-        DigitalToggle,
+        DigitalToggle, // trigger on 0->1 change
+        DigitalUpToggle, // trigger on 1->0 change
     };
 
     enum class MessageType

@@ -80,7 +80,10 @@ namespace Polygons
         {
             for (size_t i = 0; i < 256; i++)
             {
-                if ((Parameters[i].Mode == ControlMode::Digital || Parameters[i].Mode == ControlMode::DigitalToggle) && Parameters[i].Index == index)
+                if ((Parameters[i].Mode == ControlMode::Digital 
+                    || Parameters[i].Mode == ControlMode::DigitalToggle
+                    || Parameters[i].Mode == ControlMode::DigitalUpToggle) 
+                && Parameters[i].Index == index)
                     return i;
             }
 
@@ -129,14 +132,22 @@ namespace Polygons
             {
                 int paramId = -1;
                 paramId = getParamDigital(index);
-                bool toggle = Parameters[paramId].Mode == ControlMode::DigitalToggle;
+                Serial.print("paramId: ");
+                Serial.println(paramId);
+                Serial.print("paramMode: ");
+                Serial.println((int)Parameters[paramId].Mode);
+
+                bool toggle = Parameters[paramId].Mode == ControlMode::DigitalToggle || Parameters[paramId].Mode == ControlMode::DigitalUpToggle;
+                bool onUp = Parameters[paramId].Mode == ControlMode::DigitalUpToggle;
+                bool onDown = !onUp;
 
                 if (paramId >= 0)
                 {
                     int newVal = 0;
                     if (toggle)
                     {
-                        if (value > 0)
+                        bool shouldToggle = ((value > 0) && onDown) || ((value == 0) && onUp);
+                        if (shouldToggle)
                             newVal = Parameters[paramId].Value == 0 ? Parameters[paramId].MaxValue : 0;
                         else
                             return;

@@ -171,8 +171,8 @@ namespace Polygons
                     serialBuffer[serialBufferIndex-2] = 0; // remove the carriage return as well, if sent
                 
                 serialBufferIndex = 0;
-                Serial.print("Received command: ");
-                Serial.println(serialBuffer);
+                //Serial.print("Received command: ");
+                //Serial.println(serialBuffer);
 
                 auto type = MessageType::None;
                 int id = 0;
