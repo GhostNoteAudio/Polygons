@@ -139,6 +139,8 @@ namespace Polygons
 
                 canvas->setCursor(x+1,y);
                 int paramId = menu->polyOs->getParamEncoded(menu->polyOs->SelectedPage * 8 + i);
+                if (paramId == -1)
+                    continue;
                 menu->getParameterName(paramId, buffer);
                 canvas->println(buffer);
             }
@@ -151,6 +153,8 @@ namespace Polygons
 
                 canvas->setCursor(x+1,y);
                 int paramId = menu->polyOs->getParamEncoded(menu->polyOs->SelectedPage * 8 + i);
+                if (paramId == -1)
+                    continue;
                 menu->getParameterDisplay(paramId, buffer);
                 canvas->println(buffer);
             }

@@ -26,6 +26,7 @@
 #include "Teensy4i2s.h"
 #include "Types.h"
 #include "SRAMsimple.h"
+#include "Logging.h"
 
 namespace Polygons
 {
@@ -60,4 +61,6 @@ namespace Polygons
     GFXcanvas1* getCanvas();
 
     bool pushDisplay(int updateCycle); // $SC
+
+    void pushDisplayFull(); // pushes the full display buffer - takes a long time
 }

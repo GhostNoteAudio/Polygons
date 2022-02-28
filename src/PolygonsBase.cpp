@@ -1,6 +1,7 @@
 #include <string.h>
 #include "PolygonsBase.h"
 #include "storage.h"
+#include "Logging.h"
 #include "HexCompression.h"
 
 namespace Polygons
@@ -55,29 +56,34 @@ namespace Polygons
         Serial1.begin(250000);
         Serial3.begin(31250);
 
-        Serial.println("Setting pin modes...");
+        LogInfo("Setting pin modes...")
         setPinModes();
 
-        Serial.println("Enabling codec...");
+        LogInfo("Enabling codec...")
         enableCodec();    
 
-        Serial.println("Setting up I2S audio and clocks...");
+        LogInfo("Setting up I2S audio and clocks...")
         InitI2s();
 
-        Serial.println("starting codec stuff...");
+        LogInfo("starting codec stuff...")
         if (codec.testConnection())
-            Serial.println("Codec is active");
+        {
+            LogInfo("Codec is active")
+        }
         else
-            Serial.println("Codec is unresponsive!");
+        {
+            LogInfo("Codec is unresponsive!")
+        }
+        
 
         codec.init();
 
-        Serial.println("Setting initial gain...");
+        LogInfo("Setting initial gain...")
         codec.analogInGain(0, 0);
         codec.headphoneGain(0, 0, false);
         codec.lineOutGain(0, 0, false);
         //codec.enableLoopbackAdc();
-        Serial.println("Codec ready.");
+        LogInfo("Codec ready.")
 
         Storage::InitStorage();
         setBypass(0);
@@ -159,7 +165,7 @@ namespace Polygons
             serialBufferIndex++;
             if (serialBufferIndex == SerialBufferSize)
             {
-                Serial.println("Serial buffer overflow, resetting!");
+                LogWarn("Serial buffer overflow, resetting!")
                 serialBufferIndex = 0;
                 return ParameterUpdate();
             }
@@ -204,8 +210,7 @@ namespace Polygons
                 else if (CheckMessageType(serialBuffer, "$LG"))
                 {
                     type = MessageType::ControlBoard;
-                    Serial.print("LOG:");
-                    Serial.println(&serialBuffer[4]);
+                    LogInfof("LOG: %s", &serialBuffer[4]);
                 }
                 return ParameterUpdate(type, id, value);
             }
@@ -263,5 +268,19 @@ namespace Polygons
         delayMicroseconds(20);
 
         return completed;
+    }
+
+    // Pushes the full display buffer, this can take a while so it might block
+    void pushDisplayFull()
+    {
+        int cycle = 0;
+        while(true)
+        {
+            Serial.println("Pushing...");
+            bool res = pushDisplay(cycle);
+            if (res)
+                break;
+            cycle++;
+        }
     }
 }

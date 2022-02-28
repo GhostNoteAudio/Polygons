@@ -22,6 +22,7 @@
 #define I2C_ADDR_CODEC 0x18
 
 #include <Adafruit_GFX.h>
+#include "Logging.h"
 #include "Teensy4i2s.h"
 #include "Types.h"
 #include "SRAMsimple.h"
@@ -30,3 +31,4 @@
 #include "PolygonsBase.h"
 #include "PolyOS.h"
 #include "Buffers.h"
+#include "EffectBase.h"

@@ -1,5 +1,6 @@
 #include "storage.h"
 #include "PolygonsBase.h"
+#include <SdFat.h>
 
 namespace Polygons
 {
@@ -10,12 +11,12 @@ namespace Polygons
 
         bool InitStorage()
         {
-            if (!sd.begin(P_SPI_SD_CS, SPI_HALF_SPEED))
+            if (!sd.begin(P_SPI_SD_CS, SPI_FULL_SPEED))
             {
                 sd.initErrorHalt(&Serial);
                 return false;
             }
-            Serial.println("SD Card initialization done.");
+            LogInfo("SD Card initialization done.")
             return true;
         }
 
@@ -40,7 +41,7 @@ namespace Polygons
                 return false;
             
             SdFile file;
-            if (!file.open(filePath))
+            if (!file.open(filePath, O_RDONLY))
             {
                 sd.errorHalt("Failed to open file");
                 return false;
@@ -123,41 +124,34 @@ namespace Polygons
         bool WriteFile(const char* filePath, uint8_t* data, int dataLen)
         {
             SdFile myFile;
-
-            if (sd.exists(filePath)) 
-            {
-                Serial.print("Removing existing file before writing: ");
-                Serial.println(filePath);
-                sd.remove(filePath);
-            }
-            
-            if (!myFile.open(filePath, FILE_WRITE)) 
+            if (!myFile.open(filePath, O_RDWR | O_CREAT | O_TRUNC)) 
             {
                 Serial.println("open failed");
                 return false;
             }
 
             auto result = myFile.write(data, dataLen);
-            myFile.sync();
+            myFile.close();
             return (int)result == dataLen;
         }
 
         int GetFileSize(const char* filePath)
         {
             SdFile myFile;
-            if (!myFile.open(filePath))
+            if (!myFile.open(filePath, O_RDONLY))
             {
                 sd.errorHalt("Failed to open file");
                 return -1;
             }
             int output = myFile.available();
+            myFile.close();
             return output;
         }
 
         void ReadFile(const char* filePath, uint8_t* data, int maxDataLen)
         {
             SdFile myFile;
-            if (!myFile.open(filePath))
+            if (!myFile.open(filePath, O_RDONLY))
             {
                 sd.errorHalt("Failed to open file");
                 return;
@@ -174,6 +168,8 @@ namespace Polygons
                 if (read_count >= maxDataLen)
                     break;
             }
+
+            myFile.close();
         }
     }
 }

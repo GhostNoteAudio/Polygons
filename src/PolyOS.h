@@ -11,7 +11,7 @@ namespace Polygons
     struct ParameterRegistration
     {
         uint8_t ParamId;
-        uint16_t MaxValue;        
+        uint16_t MaxValue;
         ControlMode Mode;
         uint8_t Index;
         uint16_t EncoderDelta;
@@ -182,7 +182,7 @@ namespace Polygons
         {
             while(true)
             {
-                Serial.println("Scanning hardware and USB serial ports for Control Board announcement...");
+                LogInfo("Scanning hardware and USB serial ports for Control Board announcement...")
 
                 auto updateUsb = Polygons::getUpdate(&Serial);
                 auto updateHw = Polygons::getUpdate(&Serial1);
@@ -191,7 +191,7 @@ namespace Polygons
                     this->controlBoard = (ControlBoard)updateUsb.Index;
                     useLargeDisplay = this->controlBoard == ControlBoard::Alpha;
                     SerialControl = &Serial;
-                    Serial.println("Using USB Serial for control");
+                    LogInfo("Using USB Serial for control")
                     break;
                 }
                 else if (updateHw.Type == MessageType::ControlBoard)
@@ -199,7 +199,7 @@ namespace Polygons
                     this->controlBoard = (ControlBoard)updateHw.Index;
                     useLargeDisplay = this->controlBoard == ControlBoard::Alpha;
                     SerialControl = &Serial1;
-                    Serial.println("Using Hardware Serial for control");
+                    LogInfo("Using Hardware Serial for control")
                     break;
                 }
                 else
@@ -208,9 +208,20 @@ namespace Polygons
                 }
             }
 
-            Serial.print("Received Control Board ID: ");
-            Serial.println((int)controlBoard);
+            LogInfof("Received Control Board ID: %d", (int)controlBoard)
             SerialControl->println("$CA,1");
+        }
+
+        void redrawDisplay()
+        {   
+            if (controlBoard == ControlBoard::Alpha)
+                MenuManagerDrawing::DrawAlphaMenu(getMenu());
+            else if (controlBoard == ControlBoard::Sigma)
+                MenuManagerDrawing::DrawSigmaMenu(getMenu());
+            // else // no menu to be drawn, control board might not have a display
+            
+            if (CustomDrawCallback != 0)
+                CustomDrawCallback();
         }
 
         void loop()
@@ -229,16 +240,7 @@ namespace Polygons
             }
 
             if (displayUpdateCycle == 0)
-            {
-                if (controlBoard == ControlBoard::Alpha)
-                    MenuManagerDrawing::DrawAlphaMenu(getMenu());
-                else if (controlBoard == ControlBoard::Sigma)
-                    MenuManagerDrawing::DrawSigmaMenu(getMenu());
-                // else // no menu to be drawn, control board might not have a display
-                
-                if (CustomDrawCallback != 0)
-                    CustomDrawCallback();
-            }
+                redrawDisplay();
           
             for (size_t i = 0; i < 4; i++)
             {

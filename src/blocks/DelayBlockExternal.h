@@ -1,79 +1,79 @@
 #pragma once
 #include "Polygons.h"
+#include "Utils.h"
 
 constexpr bool powerOf2(int n)
 {
     return (n & (n - 1)) == 0;
 }
 
-template<uint S, uint B> // S must be power of 2, S must be multiple of B
+// The SRAM on Polygons has 64 megabits = 8 megabytes of storage.
+// this translates to 2 million floats or 4 million 16 bits samples
+template<uint S, uint B> // S must be multiple of B
 class DelayBlockExternal
 {
     int32_t address;
-    uint32_t size;
     uint32_t ptr;
-    uint32_t sizeMask;
-    uint32_t blocksize;
-    uint8_t buffer[B*4];
+    float txBuffer[B]; // needed because the transmit function blats the existing data in the buffer!
 
 public:
     inline DelayBlockExternal(int addess)
     {
-        static_assert(powerOf2(S), "S must be power of 2");
-        static_assert(S % B == 0, "S must be maultiple of B");
-        
+        static_assert(S % B == 0, "S must be multiple of B");   
         this->address = address;
-        this->size = S;
-        this->blocksize = B;
         ptr = 0;
-        sizeMask = size - 1;
     }
 
     inline void init()
     {
         CS = P_SPI_SRAM_CS;
         SPI.begin();
-        int32_t zeros[64] = { 0 };
-        for (size_t i = 0; i < size / 64; i++)
-        {
-            write(zeros, 64);
-            updatePtr(64);
-        }
+        // float zero[1] = { 0.0 };
+        // for (size_t i = 0; i < S; i++)
+        // {
+        //     writeToRam(zero, 1);
+        // }
     }
 
-    inline void writeBuffer(int count)
+    inline void writeToRam(float* data, int count)
     {
-        Polygons::sram.WriteByteArray(address + ptr * 4, (uint8_t*)buffer, count * 4);
+        SPI.beginTransaction(SPISettings(14000000, MSBFIRST, SPI_MODE0));
+        Polygons::sram.WriteByteArray(address + ptr * 4, (uint8_t*)data, count * 4);
+        SPI.endTransaction();
     }
 
-    inline void write(int32_t* source, int count)
+    inline void write(float* source, int bufSize)
     {
-        memcpy(buffer, (uint8_t*)source, count*4);
-        writeBuffer(count);
-    }
-
-    inline void write(float* source, int count)
-    {
-        for (int i = 0; i < count; i++)
-            buffer[i] = source[i] * SAMPLE_32_MAX;
-        writeBuffer(count);
+        Polygons::Copy(txBuffer, source, bufSize);
+        writeToRam(txBuffer, bufSize);
     }
 
     inline void updatePtr(int increment)
     {
-        ptr = (ptr + increment) & sizeMask;
+        ptr = (ptr + increment) % S;
     }
 
-    inline void read(int32_t* dest, uint32_t delay, int count)
+    inline void setPtr(int position)
     {
-        uint readPtr = ((int)ptr - (int)delay + size) & sizeMask;
+        ptr = position;
+    }
+
+    inline int getPtr()
+    {
+        return ptr;
+    }
+
+    inline void read(float* dest, uint32_t delay, int count)
+    {
+        SPI.beginTransaction(SPISettings(14000000, MSBFIRST, SPI_MODE0));
+        uint readPtr = ((int)ptr - (int)delay + S) % S;
         uint endAddress = readPtr + count;
-        if (endAddress >= size)
+        if (endAddress >= S)
         {
             // reading across the wrapping boundary, need two reads
-            uint count1 = endAddress - size;
+            uint count1 = endAddress - S;
             uint count2 = count - count1;
-            uint readPtr2 = (readPtr + count1) & sizeMask;
+            uint readPtr2 = (readPtr + count1) % S;
             Polygons::sram.ReadByteArray(address + readPtr * 4, (uint8_t*)dest, count1 * 4);
             Polygons::sram.ReadByteArray(address + readPtr2 * 4, (uint8_t*)&dest[count1], count2 * 4);
         }
@@ -81,5 +81,6 @@ public:
         {
             Polygons::sram.ReadByteArray(address + readPtr * 4, (uint8_t*)dest, count * 4);
         }
+        SPI.endTransaction();
     }
 };
